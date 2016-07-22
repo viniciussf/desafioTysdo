@@ -24,6 +24,12 @@
     <string name="bebidaDisponivel">Bebida disponível</string>
     <string name="cadastrar">Cadastrar</string>
     <string name="cafe">Café</string>
-    <string name="ceveja">Cerveja</string>
+    <string name="cerveja">Cerveja</string>
     <string name="ambos">Ambos</string>
+    <string name="campoObrigatorio">Campo obrigatório!</string>
+    <string name="selecione">Selecione a opção</string>
+    <string name="selecioneBebida">Selecione a bebida!</string>
+    <string name="ok">Ok</string>
+    <string name="opcaoInvalida">Opção inválida.</string>
+    <string name="enderecoSemLatitudeELong">Endereço sem latitude e longitude.</string>
 </resources>

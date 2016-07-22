@@ -81,13 +81,14 @@ public class GoogleAdapter extends ArrayAdapter implements Filterable {
                         if (MainActivity.responseEnderecoGoogle != null && MainActivity.responseEnderecoGoogle.getResults() != null && MainActivity.responseEnderecoGoogle.getResults().size() > 0) {
                             for (Result result : MainActivity.responseEnderecoGoogle.getResults()) {
                                 MainActivity.listEnderecoResult.add(result.getFormattedAddress());
+                                resultList = MainActivity.listEnderecoResult;
                             }
                         }
 
                     }
 
-                    if (MainActivity.listEnderecoResult != null && MainActivity.listEnderecoResult.size() > 0)
-                        resultList = MainActivity.listEnderecoResult;
+                    //if (MainActivity.listEnderecoResult != null && MainActivity.listEnderecoResult.size() > 0)
+
 
                     // Assign the data to the FilterResults
                     filterResults.values = resultList;
