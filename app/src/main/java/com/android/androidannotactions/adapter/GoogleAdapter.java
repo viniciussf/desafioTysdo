@@ -81,7 +81,9 @@ public class GoogleAdapter extends ArrayAdapter implements Filterable {
                         if (MainActivity.responseEnderecoGoogle != null && MainActivity.responseEnderecoGoogle.getResults() != null && MainActivity.responseEnderecoGoogle.getResults().size() > 0) {
                             for (Result result : MainActivity.responseEnderecoGoogle.getResults()) {
                                 MainActivity.listEnderecoResult.add(result.getFormattedAddress());
-                                resultList = MainActivity.listEnderecoResult;
+                                filterResults.values = MainActivity.listEnderecoResult;
+                                filterResults.count = resultList.size();
+
                             }
                         }
 
@@ -91,8 +93,7 @@ public class GoogleAdapter extends ArrayAdapter implements Filterable {
 
 
                     // Assign the data to the FilterResults
-                    filterResults.values = resultList;
-                    filterResults.count = resultList.size();
+
                 }
                 return filterResults;
             }

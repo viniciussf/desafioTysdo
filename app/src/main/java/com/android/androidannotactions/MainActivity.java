@@ -1,6 +1,10 @@
 package com.android.androidannotactions;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.annotation.TargetApi;
 import android.graphics.Point;
+import android.os.Build;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.util.Log;
@@ -9,6 +13,8 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.Spinner;
 
 import com.android.androidannotactions.Util.Alertas;
@@ -55,7 +61,11 @@ public class MainActivity extends AppCompatActivity {
     public EditText pais;
     private View focus;
     @ViewById
+    public ProgressBar progressBar;
+    @ViewById
     public Spinner spinner;
+    @ViewById
+    public LinearLayout linearForm;
     private double latitude, longitude = 0;
 
     private int bebida;
@@ -98,9 +108,21 @@ public class MainActivity extends AppCompatActivity {
         } else if (getString(R.string.ambos).equals(spinner.getSelectedItem().toString())) {
             bebida = 3;
         } else {
-            // Alertas.alerta(MainActivity.this, getString(R.string.opcaoInvalida));
+            bebida = -1;
         }
 
+    }
+    @UiThread
+    @TargetApi(Build.VERSION_CODES.HONEYCOMB_MR2)
+    public void showProgress(final boolean show) {
+        // On Honeycomb MR2 we have the ViewPropertyAnimator APIs, which allow
+        // for very easy animations. If available, use these APIs to fade-in
+        // the progress spinner.
+        if (show) {
+            progressBar.setVisibility(View.VISIBLE);
+        } else {
+            progressBar.setVisibility(View.GONE);
+        }
     }
 
     @Click(R.id.cadastrar)
@@ -129,6 +151,7 @@ public class MainActivity extends AppCompatActivity {
     @Background
     public void serviceCadastro(String params) {
         try {
+            showProgress(true);
             DataResponseCadastro db = new DataResponseCadastro();
             Object object = RestV.postToObject(params, "/prod/places", db, true);
 
@@ -147,6 +170,7 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        showProgress(false);
 
     }
 
