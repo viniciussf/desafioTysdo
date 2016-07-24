@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.widget.ProgressBar;
 
+import com.android.androidannotactions.Util.DataSerial;
 import com.android.androidannotactions.Util.HeaderRequestInterceptor;
 import com.orhanobut.logger.Logger;
 
@@ -92,8 +93,9 @@ public class RestV {
     public static Object getToObject(String parms, Object object, boolean log, boolean consultaGoogle) {
         getInstace();
         Object resposta = null;
+        String url = "";
         try {
-            String url = "";
+
             if (consultaGoogle) {
                 url = URL_GEOCODING + parms + URL_GEOCODING_KEY;
             } else {
@@ -108,8 +110,8 @@ public class RestV {
         } catch (Exception e) {
             resposta = e.getMessage();
         }
-        if (log)
-            logandoRequest(parms, resposta);
+        if (log && parms != null && resposta != null)
+            logandoRequest(url + parms, DataSerial.convertObjectToString(resposta));
         return resposta;
     }
 

@@ -74,19 +74,22 @@ public class GoogleAdapter extends ArrayAdapter implements Filterable {
 
 
                     MainActivity.responseEnderecoGoogle = new ResponseGoogle();
-                    if (!TextUtils.isEmpty(constraint))
-                        MainActivity.responseEnderecoGoogle = (ResponseGoogle) RestV.getToObject(RestV.URL_GEOCODING_ADDRESS+constraint.toString(), MainActivity.responseEnderecoGoogle, true, true);
-                    if (MainActivity.responseEnderecoGoogle != null) {
-                        MainActivity.listEnderecoResult = new ArrayList<String>();
-                        if (MainActivity.responseEnderecoGoogle != null && MainActivity.responseEnderecoGoogle.getResults() != null && MainActivity.responseEnderecoGoogle.getResults().size() > 0) {
-                            for (Result result : MainActivity.responseEnderecoGoogle.getResults()) {
-                                MainActivity.listEnderecoResult.add(result.getFormattedAddress());
-                                filterResults.values = MainActivity.listEnderecoResult;
-                                filterResults.count = resultList.size();
+                    if (!TextUtils.isEmpty(constraint)) {
+                        String param = String.valueOf(constraint);
+                        param = param.replace(" ", "+");
+                        MainActivity.responseEnderecoGoogle = (ResponseGoogle) RestV.getToObject(RestV.URL_GEOCODING_ADDRESS + param, MainActivity.responseEnderecoGoogle, true, true);
+                        if (MainActivity.responseEnderecoGoogle != null) {
+                            MainActivity.listEnderecoResult = new ArrayList<String>();
+                            if (MainActivity.responseEnderecoGoogle != null && MainActivity.responseEnderecoGoogle.getResults() != null && MainActivity.responseEnderecoGoogle.getResults().size() > 0) {
+                                for (Result result : MainActivity.responseEnderecoGoogle.getResults()) {
+                                    MainActivity.listEnderecoResult.add(result.getFormattedAddress());
+                                    filterResults.values = MainActivity.listEnderecoResult;
+                                    filterResults.count = MainActivity.listEnderecoResult.size();
 
+                                }
                             }
-                        }
 
+                        }
                     }
 
                     //if (MainActivity.listEnderecoResult != null && MainActivity.listEnderecoResult.size() > 0)

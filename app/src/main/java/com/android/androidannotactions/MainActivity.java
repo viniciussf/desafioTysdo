@@ -1,6 +1,7 @@
 package com.android.androidannotactions;
 
 import android.annotation.TargetApi;
+import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -12,6 +13,7 @@ import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.util.Log;
@@ -49,6 +51,7 @@ import java.util.List;
 @EActivity(R.layout.activity_main)
 
 public class MainActivity extends AppCompatActivity {
+    private static final int MY_PERMISSIONS_REQUEST_READ_GPS = 1;
     public static ArrayList<String> listEnderecoResult;
     public static ResponseGoogle responseEnderecoGoogle;
     @ViewById
@@ -85,7 +88,7 @@ public class MainActivity extends AppCompatActivity {
     @AfterViews
     public void montandoSpiner() {
 
-        bebida = -1;
+        bebida = 0;
         List<String> bebidas = new ArrayList<String>();
         bebidas.add(getString(R.string.selecione));
         bebidas.add(getString(R.string.cafe));
@@ -114,7 +117,7 @@ public class MainActivity extends AppCompatActivity {
         } else if (getString(R.string.ambos).equals(spinner.getSelectedItem().toString())) {
             bebida = 3;
         } else {
-            bebida = -1;
+            bebida = 0;
         }
 
     }
@@ -133,12 +136,19 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onRestart() {
+        super.onRestart();
+        verificandoStatusGps();
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
         verificandoStatusGps();
     }
 
     public void verificandoStatusGps() {
+
         LocationManager manager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
         if (!manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
@@ -158,10 +168,17 @@ public class MainActivity extends AppCompatActivity {
             lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000, 10, locationListener);
 
             Location location = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-            longitude = location.getLongitude();
-            latitude = location.getLatitude();
-            serviceEnderecoGoogle(RestV.URL_GEOCODING_LATLON, String.valueOf(latitude) + "," + String.valueOf(longitude));
+            if (location != null) {
+                longitude = location.getLongitude();
+                latitude = location.getLatitude();
+                atualizandoEnderecoPorLatLong();
+            }
         }
+    }
+
+    public void atualizandoEnderecoPorLatLong() {
+        String param = String.valueOf(latitude) + "," + String.valueOf(longitude);
+        serviceEnderecoGoogle(RestV.URL_GEOCODING_LATLON, param);
     }
 
     private final LocationListener locationListener = new LocationListener() {
@@ -169,6 +186,7 @@ public class MainActivity extends AppCompatActivity {
             if (location != null) {
                 longitude = location.getLongitude();
                 latitude = location.getLatitude();
+                atualizandoEnderecoPorLatLong();
 
             }
         }
@@ -191,24 +209,47 @@ public class MainActivity extends AppCompatActivity {
 
 
     private void buildAlertMessageNoGps() {
-        Alertas.alerta(this, getString(R.string.mensagemGps), getString(R.string.app_name), true).setButton(3, getString(R.string.sim),
-                new DialogInterface.OnClickListener() {
+
+        AlertDialog alertaDialog = null;
+        final AlertDialog finalAlertaDialog = alertaDialog;
+        AlertDialog.Builder alerBuilder = Alertas.alerta(this)
+                .setNegativeButton(getString(R.string.nao), new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        if (finalAlertaDialog != null) {
+                            finalAlertaDialog.dismiss();
+                        }
+                    }
+                })
+                .setPositiveButton(getString(R.string.ok), new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
                         startActivity(new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS));
+                        if (finalAlertaDialog != null) {
+                            finalAlertaDialog.dismiss();
+                        }
                     }
                 });
+        alerBuilder.setMessage(getString(R.string.desejaHabilitarGps));
+        alertaDialog = alerBuilder.create();
+        alertaDialog.show();
     }
 
 
     @Click(R.id.cadastrar)
     public void carregandoDadosParaServidor() {
-        atulizandoEnderecoDeForm();
+
         pegandoConteudoDoSpinner();
-        if (rotinaDeErro()) {
+        if (atulizandoEnderecoDeForm() && rotinaDeErro()) {
+
+
             DataRequestCadastro dataRequestCadastro = new DataRequestCadastro();
             dataRequestCadastro.setAddress(rua.getText().toString() + ", " + numero.getText().toString() + " - " + bairro.getText().toString() + ", " + cidade.getText().toString());
             dataRequestCadastro.setBeverage(bebida);
+            if (latitude == 0 && longitude == 0) {
+                Alertas.alerta(this, getString(R.string.enderecoSemLatitudeELong), "", false);
+                return;
+            }
             dataRequestCadastro.setLatitude(latitude);
             dataRequestCadastro.setLongitude(longitude);
             dataRequestCadastro.setName(nomeLocal.getText().toString());
@@ -221,11 +262,13 @@ public class MainActivity extends AppCompatActivity {
         } else {
             if (focus != null) {
                 focus.requestFocus();
+            } else {
+                alertas(getString(R.string.naoFoiPossivelProcessaSeuEndereco));
             }
         }
     }
 
-    public void atulizandoEnderecoDeForm() {
+    public boolean atulizandoEnderecoDeForm() {
         StringBuilder endereco = new StringBuilder();
         endereco.append(rua.getText().toString());
         endereco.append("+");
@@ -235,21 +278,30 @@ public class MainActivity extends AppCompatActivity {
         endereco.append("+");
         endereco.append(cidade.getText().toString());
         endereco.append("+");
-        endereco.append(uf.getText().toString());
-        endereco.append("+");
         endereco.append(pais.getText().toString());
 
         try {
             serviceEnderecoGoogle(RestV.URL_GEOCODING_ADDRESS, endereco.toString());
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+
+    }
+
+    @Background
+    public void serviceEnderecoGoogle(String rota, String conteudo) {
+
+        try {
+            conteudo = conteudo.replace(" ", "+");
+            MainActivity.responseEnderecoGoogle = new ResponseGoogle();
+            MainActivity.responseEnderecoGoogle = (ResponseGoogle) RestV.getToObject(rota + conteudo, MainActivity.responseEnderecoGoogle, true, true);
             atulizandoTelaComEndereco(0);
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-    }
-
-    public void serviceEnderecoGoogle(String rota, String conteudo) {
-        MainActivity.responseEnderecoGoogle = (ResponseGoogle) RestV.getToObject(rota + conteudo, MainActivity.responseEnderecoGoogle, true, true);
     }
 
     @Background
@@ -269,6 +321,8 @@ public class MainActivity extends AppCompatActivity {
                     if (db != null) {
                         if (db.getMessage() != null && db.getPlace_id() != null) {
                             alertas(db.getMessage());
+                            limpandoTela();
+
                         }
                     }
                 }
@@ -280,44 +334,32 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    @AfterViews
-    public void autoComplete() {
-      /*  autocompleteFragment = (PlaceAutocompleteFragment)
-                getFragmentManager().findFragmentById(R.id.place_autocomplete_fragment);
-        AutocompleteFilter typeFilter = new AutocompleteFilter.Builder()
-                .setTypeFilter(AutocompleteFilter.TYPE_FILTER_REGIONS)
-                .build();
-        autocompleteFragment.setFilter(typeFilter);
-        autocompleteFragment.setHint("Nome do local, rua ....");
-        autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
-                                                            @Override
-                                                            public void onPlaceSelected(Place place) {
-                                                                Log.i("CErtooo", "Place: " + place.getName());
-                                                                if (place != null) {
-                                                                    rua.setText(place.getWebsiteUri().toString());
-
-                                                                }
-                                                            }
-
-                                                            @Override
-                                                            public void onError(Status status) {
-                                                                Log.i("errado", "An error occurred: " + status);
-                                                            }
-                                                        }
-        );
-        searchAsync();*/
-
+    @UiThread
+    public void limpandoTela() {
+        nomeLocal.setText(" ");
+        rua.setText(" ");
+        numero.setText(" ");
+        bairro.setText(" ");
+        cidade.setText(" ");
+        uf.setText(" ");
+        pais.setText(" ");
+        bebida = 0;
+        latitude = 0;
+        longitude = 0;
+        montandoSpiner();
     }
+
+
 
     @UiThread
     public void alertas(String msg) {
-        Alertas.alerta(this, msg);
+        Alertas.alerta(this, msg, "", false);
     }
 
     @AfterViews
     public void montandoAutoComplete() {
         rua.setAdapter(new GoogleAdapter(this, android.R.layout.simple_expandable_list_item_1));
-        rua.setThreshold(2);
+        rua.setThreshold(1);
         rua.performCompletion();
         //mudando largura do autocomplete
         Point pointSize = new Point();
@@ -329,13 +371,12 @@ public class MainActivity extends AppCompatActivity {
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
                 //PASSANDO POSICAO
                 atulizandoTelaComEndereco(i);
-
-
             }
         });
     }
 
-    private void atulizandoTelaComEndereco(int i) {
+    @UiThread
+    public void atulizandoTelaComEndereco(int i) {
         if (responseEnderecoGoogle != null && responseEnderecoGoogle.getResults() != null && responseEnderecoGoogle.getResults().size() > 0 && responseEnderecoGoogle.getResults().get(i) != null) {
             if (responseEnderecoGoogle.getResults().get(i).getGeometry() != null && responseEnderecoGoogle.getResults().get(i).getGeometry().getLocation() != null) {
                 latitude = responseEnderecoGoogle.getResults().get(i).getGeometry().getLocation().getLat();
@@ -347,26 +388,36 @@ public class MainActivity extends AppCompatActivity {
                         if ("route".equals(r.getTypes().get(y))) {
                             if (!TextUtils.isEmpty(r.getLongName())) {
                                 rua.setText(r.getLongName());
+                            } else {
+                                rua.setText("");
                             }
                         }
                         if ("sublocality_level_1".equals(r.getTypes().get(y))) {
                             if (!TextUtils.isEmpty(r.getLongName())) {
                                 bairro.setText(r.getLongName());
+                            } else {
+                                bairro.setText("");
                             }
                         }
                         if ("locality".equals(r.getTypes().get(y))) {
                             if (!TextUtils.isEmpty(r.getLongName())) {
                                 cidade.setText(r.getLongName());
+                            } else {
+                                cidade.setText("");
                             }
                         }
                         if ("administrative_area_level_1".equals(r.getTypes().get(y))) {
                             if (!TextUtils.isEmpty(r.getShortName())) {
                                 uf.setText(r.getShortName());
+                            } else {
+                                uf.setText("");
                             }
                         }
                         if ("country".equals(r.getTypes().get(y))) {
                             if (!TextUtils.isEmpty(r.getShortName())) {
                                 pais.setText(r.getShortName());
+                            } else {
+                                pais.setText("");
                             }
                         }
 
@@ -378,16 +429,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    @Background
-    void searchAsync() {
-
-
-    }
-
-  /*  @UiThread
-    void updateTela(EditText editText, String text) {
-        Toast.makeText(getApplicationContext(), greeting, Toast.LENGTH_LONG).show();
-    }*/
 
     private boolean rotinaDeErro() {
 
@@ -426,15 +467,75 @@ public class MainActivity extends AppCompatActivity {
             focus = pais;
             return false;
         }
-        if (bebida == -1) {
+        if (bebida == 0) {
             focus = spinner;
             Alertas.alerta(this, getString(R.string.selecioneBebida));
             return false;
         }
-        if (latitude == 0 && longitude == 0) {
+       /* if (latitude == 0 && longitude == 0) {
             Alertas.alerta(this, getString(R.string.enderecoSemLatitudeELong));
             return false;
-        }
+        }*/
+        focus = null;
         return true;
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           String permissions[], int[] grantResults) {
+        switch (requestCode) {
+            case MY_PERMISSIONS_REQUEST_READ_GPS: {
+                // If request is cancelled, the result arrays are empty.
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    verificandoStatusGps();
+                    // permission was granted, yay! Do the
+                    // contacts-related task you need to do.
+
+                } else {
+
+                    // permission denied, boo! Disable the
+                    // functionality that depends on this permission.
+                }
+                return;
+            }
+
+            // other 'case' lines to check for other
+            // permissions this app might request
+        }
+    }
+
+    @AfterViews
+    public void checkPermission() {
+        // Here, thisActivity is the current activity
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            if (ContextCompat.checkSelfPermission(this,
+                    android.Manifest.permission.ACCESS_FINE_LOCATION)
+                    != PackageManager.PERMISSION_GRANTED) {
+
+                // Should we show an explanation?
+                if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+                        android.Manifest.permission.ACCESS_FINE_LOCATION)) {
+                    verificandoStatusGps();
+                    // Show an expanation to the user *asynchronously* -- don't block
+                    // this thread waiting for the user's response! After the user
+                    // sees the explanation, try again to request the permission.
+
+                } else {
+
+                    // No explanation needed, we can request the permission.
+
+                    ActivityCompat.requestPermissions(this,
+                            new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION},
+                            MY_PERMISSIONS_REQUEST_READ_GPS);
+
+                    // MY_PERMISSIONS_REQUEST_READ_CONTACTS is an
+                    // app-defined int constant. The callback method gets the
+                    // result of the request.
+                }
+            }
+        } else {
+            verificandoStatusGps();
+        }
     }
 }

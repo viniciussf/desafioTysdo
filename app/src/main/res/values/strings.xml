@@ -35,4 +35,6 @@
     <string name="sim">Sim</string>
     <string name="nao">Não</string>
     <string name="mensagemGps">Deseja habilitar o seu GPS para melhor experiência com app?</string>
+    <string name="desejaHabilitarGps">Deseja habilitar o gps?</string>
+    <string name="naoFoiPossivelProcessaSeuEndereco">Não foi possivel processar seu endereço, por favor tente novamente!</string>
 </resources>
