@@ -32,4 +32,7 @@
     <string name="ok">Ok</string>
     <string name="opcaoInvalida">Opção inválida.</string>
     <string name="enderecoSemLatitudeELong">Endereço sem latitude e longitude.</string>
+    <string name="sim">Sim</string>
+    <string name="nao">Não</string>
+    <string name="mensagemGps">Deseja habilitar o seu GPS para melhor experiência com app?</string>
 </resources>

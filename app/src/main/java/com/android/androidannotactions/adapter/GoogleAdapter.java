@@ -75,7 +75,7 @@ public class GoogleAdapter extends ArrayAdapter implements Filterable {
 
                     MainActivity.responseEnderecoGoogle = new ResponseGoogle();
                     if (!TextUtils.isEmpty(constraint))
-                        MainActivity.responseEnderecoGoogle = (ResponseGoogle) RestV.getToObject(constraint.toString(), MainActivity.responseEnderecoGoogle, true, true);
+                        MainActivity.responseEnderecoGoogle = (ResponseGoogle) RestV.getToObject(RestV.URL_GEOCODING_ADDRESS+constraint.toString(), MainActivity.responseEnderecoGoogle, true, true);
                     if (MainActivity.responseEnderecoGoogle != null) {
                         MainActivity.listEnderecoResult = new ArrayList<String>();
                         if (MainActivity.responseEnderecoGoogle != null && MainActivity.responseEnderecoGoogle.getResults() != null && MainActivity.responseEnderecoGoogle.getResults().size() > 0) {

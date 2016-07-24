@@ -25,8 +25,10 @@ public class RestV {
     private static RestTemplate restTemplate;
     //aqui voce colca sua url base
     private static String URL_BASE = "https://c7q5vyiew7.execute-api.us-east-1.amazonaws.com";
-    private static String URL_GEOCODING = "https://maps.googleapis.com/maps/api/geocode/json?address=";
+    private static String URL_GEOCODING = "https://maps.googleapis.com/maps/api/geocode/json?";
     private static String URL_GEOCODING_KEY = "&key=AIzaSyBNPznoGvMq2SQC5srbFaHAe0AhFOnaw1Q";
+    public static String URL_GEOCODING_ADDRESS = "address=";
+    public static String URL_GEOCODING_LATLON = "latlng=";
     private static boolean log = false;
     private Context contextA;
     private static RestV restV;

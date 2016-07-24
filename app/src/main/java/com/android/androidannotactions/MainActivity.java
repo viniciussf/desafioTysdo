@@ -1,10 +1,17 @@
 package com.android.androidannotactions;
 
-import android.animation.Animator;
-import android.animation.AnimatorListenerAdapter;
 import android.annotation.TargetApi;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Point;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.Build;
+import android.os.Bundle;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.util.Log;
@@ -25,7 +32,6 @@ import com.android.androidannotactions.model.DataRequestCadastro;
 import com.android.androidannotactions.model.DataResponseCadastro;
 import com.android.androidannotactions.model.ResponseGoogle;
 import com.android.androidannotactions.rest.RestV;
-import com.google.android.gms.drive.realtime.internal.event.ObjectChangedDetails;
 import com.google.android.gms.location.places.ui.PlaceAutocompleteFragment;
 
 import org.androidannotations.annotations.AfterViews;
@@ -112,6 +118,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
     }
+
     @UiThread
     @TargetApi(Build.VERSION_CODES.HONEYCOMB_MR2)
     public void showProgress(final boolean show) {
@@ -125,8 +132,78 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        verificandoStatusGps();
+    }
+
+    public void verificandoStatusGps() {
+        LocationManager manager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+
+        if (!manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+            buildAlertMessageNoGps();
+        } else {
+            LocationManager lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+            if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                // TODO: Consider calling
+                //    ActivityCompat#requestPermissions
+                // here to request the missing permissions, and then overriding
+                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                //                                          int[] grantResults)
+                // to handle the case where the user grants the permission. See the documentation
+                // for ActivityCompat#requestPermissions for more details.
+                return;
+            }
+            lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000, 10, locationListener);
+
+            Location location = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+            longitude = location.getLongitude();
+            latitude = location.getLatitude();
+            serviceEnderecoGoogle(RestV.URL_GEOCODING_LATLON, String.valueOf(latitude) + "," + String.valueOf(longitude));
+        }
+    }
+
+    private final LocationListener locationListener = new LocationListener() {
+        public void onLocationChanged(Location location) {
+            if (location != null) {
+                longitude = location.getLongitude();
+                latitude = location.getLatitude();
+
+            }
+        }
+
+        @Override
+        public void onStatusChanged(String s, int i, Bundle bundle) {
+
+        }
+
+        @Override
+        public void onProviderEnabled(String s) {
+
+        }
+
+        @Override
+        public void onProviderDisabled(String s) {
+
+        }
+    };
+
+
+    private void buildAlertMessageNoGps() {
+        Alertas.alerta(this, getString(R.string.mensagemGps), getString(R.string.app_name), true).setButton(3, getString(R.string.sim),
+                new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        startActivity(new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS));
+                    }
+                });
+    }
+
+
     @Click(R.id.cadastrar)
     public void carregandoDadosParaServidor() {
+        atulizandoEnderecoDeForm();
         pegandoConteudoDoSpinner();
         if (rotinaDeErro()) {
             DataRequestCadastro dataRequestCadastro = new DataRequestCadastro();
@@ -148,8 +225,37 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public void atulizandoEnderecoDeForm() {
+        StringBuilder endereco = new StringBuilder();
+        endereco.append(rua.getText().toString());
+        endereco.append("+");
+        endereco.append(numero.getText().toString());
+        endereco.append("+");
+        endereco.append(bairro.getText().toString());
+        endereco.append("+");
+        endereco.append(cidade.getText().toString());
+        endereco.append("+");
+        endereco.append(uf.getText().toString());
+        endereco.append("+");
+        endereco.append(pais.getText().toString());
+
+        try {
+            serviceEnderecoGoogle(RestV.URL_GEOCODING_ADDRESS, endereco.toString());
+            atulizandoTelaComEndereco(0);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    public void serviceEnderecoGoogle(String rota, String conteudo) {
+        MainActivity.responseEnderecoGoogle = (ResponseGoogle) RestV.getToObject(rota + conteudo, MainActivity.responseEnderecoGoogle, true, true);
+    }
+
     @Background
     public void serviceCadastro(String params) {
+
+
         try {
             showProgress(true);
             DataResponseCadastro db = new DataResponseCadastro();
@@ -221,51 +327,55 @@ public class MainActivity extends AppCompatActivity {
         rua.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-
-                if (responseEnderecoGoogle != null && responseEnderecoGoogle.getResults() != null && responseEnderecoGoogle.getResults().size() > 0 && responseEnderecoGoogle.getResults().get(i) != null) {
-                    if (responseEnderecoGoogle.getResults().get(i).getGeometry() != null && responseEnderecoGoogle.getResults().get(i).getGeometry().getLocation() != null) {
-                        latitude = responseEnderecoGoogle.getResults().get(i).getGeometry().getLocation().getLat();
-                        longitude = responseEnderecoGoogle.getResults().get(i).getGeometry().getLocation().getLng();
-                    }
-                    for (AddressComponent r : responseEnderecoGoogle.getResults().get(i).getAddressComponents()) {
-                        if (r.getTypes() != null) {
-                            for (int y = 0; y < r.getTypes().size(); y++) {
-                                if ("route".equals(r.getTypes().get(y))) {
-                                    if (!TextUtils.isEmpty(r.getLongName())) {
-                                        rua.setText(r.getLongName());
-                                    }
-                                }
-                                if ("sublocality_level_1".equals(r.getTypes().get(y))) {
-                                    if (!TextUtils.isEmpty(r.getLongName())) {
-                                        bairro.setText(r.getLongName());
-                                    }
-                                }
-                                if ("locality".equals(r.getTypes().get(y))) {
-                                    if (!TextUtils.isEmpty(r.getLongName())) {
-                                        cidade.setText(r.getLongName());
-                                    }
-                                }
-                                if ("administrative_area_level_1".equals(r.getTypes().get(y))) {
-                                    if (!TextUtils.isEmpty(r.getShortName())) {
-                                        uf.setText(r.getShortName());
-                                    }
-                                }
-                                if ("country".equals(r.getTypes().get(y))) {
-                                    if (!TextUtils.isEmpty(r.getShortName())) {
-                                        pais.setText(r.getShortName());
-                                    }
-                                }
-
-                            }
-
-                        }
-                    }
-
-                }
+                //PASSANDO POSICAO
+                atulizandoTelaComEndereco(i);
 
 
             }
         });
+    }
+
+    private void atulizandoTelaComEndereco(int i) {
+        if (responseEnderecoGoogle != null && responseEnderecoGoogle.getResults() != null && responseEnderecoGoogle.getResults().size() > 0 && responseEnderecoGoogle.getResults().get(i) != null) {
+            if (responseEnderecoGoogle.getResults().get(i).getGeometry() != null && responseEnderecoGoogle.getResults().get(i).getGeometry().getLocation() != null) {
+                latitude = responseEnderecoGoogle.getResults().get(i).getGeometry().getLocation().getLat();
+                longitude = responseEnderecoGoogle.getResults().get(i).getGeometry().getLocation().getLng();
+            }
+            for (AddressComponent r : responseEnderecoGoogle.getResults().get(i).getAddressComponents()) {
+                if (r.getTypes() != null) {
+                    for (int y = 0; y < r.getTypes().size(); y++) {
+                        if ("route".equals(r.getTypes().get(y))) {
+                            if (!TextUtils.isEmpty(r.getLongName())) {
+                                rua.setText(r.getLongName());
+                            }
+                        }
+                        if ("sublocality_level_1".equals(r.getTypes().get(y))) {
+                            if (!TextUtils.isEmpty(r.getLongName())) {
+                                bairro.setText(r.getLongName());
+                            }
+                        }
+                        if ("locality".equals(r.getTypes().get(y))) {
+                            if (!TextUtils.isEmpty(r.getLongName())) {
+                                cidade.setText(r.getLongName());
+                            }
+                        }
+                        if ("administrative_area_level_1".equals(r.getTypes().get(y))) {
+                            if (!TextUtils.isEmpty(r.getShortName())) {
+                                uf.setText(r.getShortName());
+                            }
+                        }
+                        if ("country".equals(r.getTypes().get(y))) {
+                            if (!TextUtils.isEmpty(r.getShortName())) {
+                                pais.setText(r.getShortName());
+                            }
+                        }
+
+                    }
+
+                }
+            }
+
+        }
     }
 
     @Background
