@@ -144,11 +144,12 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        verificandoStatusGps();
+        checkPermission();
+
     }
 
     public void verificandoStatusGps() {
-        checkPermission();
+
         LocationManager manager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
         if (!manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
@@ -487,7 +488,7 @@ public class MainActivity extends AppCompatActivity {
                 // If request is cancelled, the result arrays are empty.
                 if (grantResults.length > 0
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    // verificandoStatusGps();
+                    verificandoStatusGps();
                     // permission was granted, yay! Do the
                     // contacts-related task you need to do.
 
@@ -504,7 +505,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    @AfterViews
+
     public void checkPermission() {
         // Here, thisActivity is the current activity
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
@@ -515,7 +516,7 @@ public class MainActivity extends AppCompatActivity {
                 // Should we show an explanation?
                 if (ActivityCompat.shouldShowRequestPermissionRationale(this,
                         android.Manifest.permission.ACCESS_FINE_LOCATION)) {
-                    v
+
                     // Show an expanation to the user *asynchronously* -- don't block
                     // this thread waiting for the user's response! After the user
                     // sees the explanation, try again to request the permission.
@@ -532,8 +533,12 @@ public class MainActivity extends AppCompatActivity {
                     // app-defined int constant. The callback method gets the
                     // result of the request.
                 }
+            } else {
+                verificandoStatusGps();
             }
+        } else {
+            verificandoStatusGps();
         }
-        
+
     }
 }
