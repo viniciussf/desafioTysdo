@@ -148,7 +148,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void verificandoStatusGps() {
-
+        checkPermission();
         LocationManager manager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
         if (!manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
@@ -350,7 +350,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-
     @UiThread
     public void alertas(String msg) {
         Alertas.alerta(this, msg, "", false);
@@ -488,7 +487,7 @@ public class MainActivity extends AppCompatActivity {
                 // If request is cancelled, the result arrays are empty.
                 if (grantResults.length > 0
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                   // verificandoStatusGps();
+                    // verificandoStatusGps();
                     // permission was granted, yay! Do the
                     // contacts-related task you need to do.
 
